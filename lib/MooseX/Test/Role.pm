@@ -1,5 +1,7 @@
 package MooseX::Test::Role;
 
+our $VERSION = '0.01';
+
 use strict;
 use warnings;
 
@@ -35,3 +37,42 @@ our $ok = sub { $Test->ok(@_) };
 sub ok { $ok->(@_) }
 
 1;
+
+=pod
+
+=head1 NAME
+
+MooseX::Test::Role - Test functions for Moose roles
+
+=head1 SYNOPSIS
+
+  use MooseX::Test::Role;
+  use Test::More tests => 2;
+
+  requires_ok('MyRole', qw/method1 method2/);
+
+=head1 DESCRIPTION
+
+Provides functions for testing roles. Right now the only method is
+C<requires_ok>.
+
+=head1 FUNCTIONS
+
+=over 4
+
+=item B<requires_ok ($role, @methods)>
+
+Tests if role requires one or more methods.
+
+=back
+
+=head1 AUTHOR
+
+Paul Boyd <pboyd@dev3l.net>
+
+=head1 LICENSE
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
