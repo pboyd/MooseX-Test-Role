@@ -70,7 +70,9 @@ Tests if role requires one or more methods.
 
 Paul Boyd <pboyd@dev3l.net>
 
-=head1 LICENSE
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2011 by Paul Boyd.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
