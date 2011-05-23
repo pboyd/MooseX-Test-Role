@@ -8,26 +8,45 @@ use warnings;
 use List::Util qw/first/;
 use Test::Builder;
 use Moose qw//;
+use Carp;
 
 use Exporter qw/import unimport/;
-our @EXPORT = qw/requires_ok/;
+our @EXPORT = qw/requires_ok consumer_of/;
 
 sub requires_ok {
-    my ( $class, @required ) = @_;
-    my $msg = "$class requires " . join( ', ', @required );
+    my ( $role, @required ) = @_;
+    my $msg = "$role requires " . join( ', ', @required );
 
-    if ( !$class->can('meta') || !$class->meta->isa('Moose::Meta::Role') ) {
+    if ( !$role->can('meta') || !$role->meta->isa('Moose::Meta::Role') ) {
         ok( 0, $msg );
         return;
     }
 
     foreach my $req (@required) {
-        unless (first { $_ eq $req } $class->meta->get_required_method_list) {
+        unless (first { $_ eq $req } $role->meta->get_required_method_list) {
             ok(0, $msg);
             return;
         }
     }
     ok(1, $msg);
+}
+
+sub consumer_of {
+    my ( $role, %methods ) = @_;
+
+    if ( !$role->can('meta') || !$role->meta->isa('Moose::Meta::Role') ) {
+        confess 'first argument to consumer_of should be a role';
+    }
+
+    $methods{$_} ||= sub { undef }
+      for $role->meta->get_required_method_list;
+
+    my $meta = Moose::Meta::Class->create_anon_class(
+        roles   => [$role],
+        methods => \%methods,
+    );
+
+    return $meta->new_object;
 }
 
 my $Test = Test::Builder->new;
