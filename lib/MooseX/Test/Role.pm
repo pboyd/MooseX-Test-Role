@@ -1,6 +1,6 @@
 package MooseX::Test::Role;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use strict;
 use warnings;
@@ -70,14 +70,30 @@ MooseX::Test::Role - Test functions for Moose roles
 
   requires_ok('MyRole', qw/method1 method2/);
 
+  my $consumer = consumer_of('MyRole', method1 => sub { 1 });
+  ok($consumer->myrole_method);
+  is($consumer->method1, 1);
+
 =head1 DESCRIPTION
 
-Provides functions for testing roles. Right now the only method is
-C<requires_ok>.
+Provides functions for testing roles.
 
-=head1 FUNCTIONS
+=head1 EXPORTED FUNCTIONS
 
 =over 4
+
+=item B<consumer_of ($role, %methods)>
+
+Creates an instance of a class which consumes the role. Required methods are
+stubbed, they return undef by default.
+
+To add additional methods to the instance specify the name and coderef:
+
+  consumer_of('MyRole',
+      method1 => sub { 'one' },
+      method2 => sub { 'two' },
+      required_method => sub { 'required' },
+  );
 
 =item B<requires_ok ($role, @methods)>
 
