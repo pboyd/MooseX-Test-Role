@@ -23,12 +23,12 @@ sub requires_ok {
     }
 
     foreach my $req (@required) {
-        unless (first { $_ eq $req } $role->meta->get_required_method_list) {
-            ok(0, $msg);
+        unless ( first { $_ eq $req } $role->meta->get_required_method_list ) {
+            ok( 0, $msg );
             return;
         }
     }
-    ok(1, $msg);
+    ok( 1, $msg );
 }
 
 sub consumer_of {
