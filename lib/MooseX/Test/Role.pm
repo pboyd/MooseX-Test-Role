@@ -76,7 +76,58 @@ MooseX::Test::Role - Test functions for Moose roles
 
 =head1 DESCRIPTION
 
-Provides functions for testing roles.
+Provides functions for testing Moose roles.
+
+=head1 BACKGROUND
+
+Unit testing a Moose role can be hard. A major problem is creating classes that
+consume the role.
+
+One could side-step the problem entirely and just call the sub-routines in the
+role's package directly. For example,
+
+  Fooable->bar();
+
+That only works until C<Fooable> calls another method in the consuming class
+though. Mock objects are a tempting way to solve that problem:
+
+  my $consumer = Test::MockObject->new();
+  $consumer->set_always('baz', 1);
+  Fooable::bar($consumer);
+
+But if C<Fooable::bar> happens to call another method in the role then
+the mock consumer will have to mock that method too.
+
+A better way is to create a class to consume the role:
+
+  package FooableTest;
+
+  use Moose;
+  with 'Fooable';
+
+  sub required_method {}
+
+  package main;
+
+  my $consumer = FooableTest->new();
+  $consumer->bar();
+
+This can work well for some roles. Unfortunately, if several variations have to
+be tested, it may be necessary to create several consuming test classes, which
+gets tedious.
+
+Fortunately, Moose can create anonymous classes which consume roles:
+
+    my $consumer = Moose::Meta::Class->create_anon_class(
+        roles   => ['Fooable'],
+        methods => {
+            required_method => sub {},
+        }
+    )->new_object();
+    $consumer->bar();
+
+This can still be tedious, especially for roles that require lots of methods.
+C<MooseX::Test::Role::consumer_of> simply makes this easier to do.
 
 =head1 EXPORTED FUNCTIONS
 
@@ -100,6 +151,12 @@ To add additional methods to the instance specify the name and coderef:
 Tests if role requires one or more methods.
 
 =back
+
+=head1 GITHUB
+
+Patches, comments or mean-spirited code reviews are all welcomed on GitHub:
+
+https://github.com/pboyd/MooseX-Test-Role
 
 =head1 AUTHOR
 
