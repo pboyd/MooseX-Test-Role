@@ -5,25 +5,26 @@ our $VERSION = '0.04';
 use strict;
 use warnings;
 
-use List::Util qw/first/;
+use Carp qw( confess );
+use Class::Load qw( try_load_class );
+use List::Util qw( first );
 use Test::Builder;
-use Moose qw//;
-use Carp;
 
-use Exporter qw/import unimport/;
-our @EXPORT = qw/requires_ok consumer_of/;
+use Exporter qw( import unimport );
+our @EXPORT = qw( requires_ok consumer_of );
 
 sub requires_ok {
     my ( $role, @required ) = @_;
     my $msg = "$role requires " . join( ', ', @required );
 
-    if ( !$role->can('meta') || !$role->meta->isa('Moose::Meta::Role') ) {
+    my $role_type = _derive_role_type($role);
+    if (!$role_type) {
         ok( 0, $msg );
         return;
     }
 
     foreach my $req (@required) {
-        unless ( first { $_ eq $req } $role->meta->get_required_method_list ) {
+        unless ( first { $_ eq $req } _required_methods($role_type, $role) ) {
             ok( 0, $msg );
             return;
         }
@@ -34,22 +35,106 @@ sub requires_ok {
 sub consumer_of {
     my ( $role, %methods ) = @_;
 
-    if ( !$role->can('meta') || !$role->meta->isa('Moose::Meta::Role') ) {
-        confess 'first argument to consumer_of should be a role';
-    }
+    my $role_type = _derive_role_type($role);
+    confess 'first argument to consumer_of should be a role' unless $role_type;
 
-    $methods{$_} ||= sub { undef }
-      for $role->meta->get_required_method_list;
+    # Inline stubs for everything that's required so it'll pass the requires check.
+    my @default_subs = map { "sub $_ { }" } _required_methods($role_type, $role);
 
-    my $meta = Moose::Meta::Class->create_anon_class(
-        roles   => [$role],
-        methods => \%methods,
+    my $package = _build_consuming_package(
+        role_type => $role_type,
+        role => $role,
+        inline_subs => \@default_subs,
     );
 
-    return $meta->new_object;
+    # Now replace the stubs with any methods we were passed.
+    while (my ($method, $subref) = each(%methods)) {
+        no strict 'refs';
+        no warnings 'redefine';
+        *{$package . '::' . $method} = $subref;
+    }
+
+    # Moose and Moo can be instantiated and should be. Role::Tiny however isn't
+    # a full OO implementation and so doesn't provide a "new" method.
+    return $package->can('new') ? $package->new() : $package;
 }
 
-my $Test = Test::Builder->new;
+sub _required_methods {
+    my ($role_type, $role) = @_;
+    my @methods;
+
+    if ($role_type eq 'Moose::Role') {
+        @methods = $role->meta->get_required_method_list();
+    }
+    elsif ($role_type eq 'Role::Tiny') {
+
+        # This seems brittle, but there aren't many options to get this data.
+        # Moo relies on %INFO too, so it seems like it would be a hard thing
+        # for to move away from.
+        my $info = $Role::Tiny::INFO{$role};
+        if ($info && ref($info->{requires}) eq 'ARRAY') {
+            @methods = @{$info->{requires}};
+        }
+    }
+
+    return wantarray ? @methods : \@methods;
+}
+
+sub _derive_role_type {
+    my $role = shift;
+
+    if ($role->can('meta') && $role->meta()->isa('Moose::Meta::Role')) {
+        # Also covers newer Moo::Roles
+        return 'Moose::Role';
+    }
+
+    if (try_load_class('Role::Tiny') && Role::Tiny->is_role($role)) {
+        # Also covers older Moo::Roles
+        return 'Role::Tiny';
+    }
+
+    return;
+}
+
+my $package_counter = 0;
+sub _build_consuming_package {
+    my %args = @_;
+
+    my $role_type = $args{role_type};
+    my $role = $args{role};
+    my $inline_subs = $args{inline_subs} || [];
+
+    # We'll need a thing that exports a "with" sub
+    my $with_exporter;
+    if ($role_type eq 'Moose::Role') {
+        $with_exporter = 'Moose';
+    }
+    elsif ($role_type eq 'Role::Tiny') {
+        $with_exporter = 'Role::Tiny::With';
+    }
+    else {
+        confess "Unknown role type $role_type";
+    }
+
+    my $package = 'MooseX::Test::Role::Consumer' . $package_counter++;
+    my $source = qq{
+        package $package;
+
+        use $with_exporter;
+        with('$role');
+    };
+
+    $source .= join("\n", @{$inline_subs});
+
+    #warn $source;
+
+    eval($source);
+    die $@ if $@;
+
+    return $package;
+}
+
+my $Test = Test::Builder->new();
 
 # Done this way for easier testing
 our $ok = sub { $Test->ok(@_) };
@@ -76,14 +161,15 @@ MooseX::Test::Role - Test functions for Moose roles
 
 =head1 DESCRIPTION
 
-Provides functions for testing Moose roles.
+Provides functions for testing roles. Supports roles created with
+L<Moose::Role>, L<Moo::Role> or L<Role::Tiny>.
 
 =head1 BACKGROUND
 
-Unit testing a Moose role can be hard. A major problem is creating classes that
+Unit testing a role can be hard. A major problem is creating classes that
 consume the role.
 
-One could side-step the problem entirely and just call the sub-routines in the
+One could side-step the problem entirely and just call the subroutines in the
 role's package directly. For example,
 
   Fooable->bar();
@@ -116,7 +202,7 @@ This can work well for some roles. Unfortunately, if several variations have to
 be tested, it may be necessary to create several consuming test classes, which
 gets tedious.
 
-Fortunately, Moose can create anonymous classes which consume roles:
+Moose can create anonymous classes which consume roles:
 
     my $consumer = Moose::Meta::Class->create_anon_class(
         roles   => ['Fooable'],
@@ -133,12 +219,19 @@ C<MooseX::Test::Role::consumer_of> simply makes this easier to do.
 
 =over 4
 
-=item B<consumer_of ($role, %methods)>
+=item C<consumer_of ($role, %methods)>
 
-Creates an instance of a class which consumes the role. Required methods are
-stubbed, they return undef by default.
+Creates a class which consumes the role.
 
-To add additional methods to the instance specify the name and coderef:
+C<$role> must be the package name of a role. L<Moose::Role>, L<Moo::Role> and
+L<Role::Tiny> are supported.
+
+Returns an instance of the consuming class where possible. However, if the
+class does not have a C<new()> method (which is commonly the case for
+L<Role::Tiny>), then the package name will be returned instead.
+
+Any method required by the role will be stubbed. To override the default stub
+methods, or to add additional methods, specify the name and a coderef:
 
   consumer_of('MyRole',
       method1 => sub { 'one' },
@@ -146,7 +239,7 @@ To add additional methods to the instance specify the name and coderef:
       required_method => sub { 'required' },
   );
 
-=item B<requires_ok ($role, @methods)>
+=item C<requires_ok ($role, @methods)>
 
 Tests if role requires one or more methods.
 
@@ -156,15 +249,15 @@ Tests if role requires one or more methods.
 
 Patches, comments or mean-spirited code reviews are all welcomed on GitHub:
 
-https://github.com/pboyd/MooseX-Test-Role
+L<https://github.com/pboyd/MooseX-Test-Role>
 
 =head1 AUTHOR
 
-Paul Boyd <pboyd@dev3l.net>
+Paul Boyd <boyd.paul2@gmail.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Paul Boyd.
+This software is copyright (c) 2014 by Paul Boyd.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
