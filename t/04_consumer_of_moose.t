@@ -4,7 +4,7 @@ use warnings;
 use Test::More tests => 8;
 
 use MooseX::Test::Role;
-use Test::Moose;
+use Test::Moose qw( does_ok );
 
 use Moose qw//;
 
