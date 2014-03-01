@@ -1,4 +1,4 @@
 MooseX::Test::Role
 ==================
 
-Test functions to aid in testing Moose roles. See the perldoc for more info.
+Test functions to aid in testing roles. See the perldoc for more info.
