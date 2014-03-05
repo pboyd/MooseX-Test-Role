@@ -26,7 +26,8 @@ sub test_role_type {
         my $role = util::make_role(
             type             => $type,
             required_methods => ['c'],
-            methods          => [ 'sub a { "return a" }', ]
+            methods          => [ 'sub a { "return a" }' ],
+            attributes       => ['arg'],
         );
 
         my $consumer = consumer_of($role);
@@ -46,6 +47,16 @@ sub test_role_type {
 
         $consumer = consumer_of( $role, c => sub { 'custom c' } );
         is( $consumer->c, 'custom c', 'explicit methods override the default' );
+
+        if ($type eq 'Moose::Role' or $type eq 'Moo::Role') {
+            my @args = ($role, [arg => 1]);
+
+            $consumer = consumer_of(@args);
+            ok( $consumer->arg, 'constructor argument' );
+
+            $consumer = consumer_of(@args, c => sub {'custom c'});
+            ok( $consumer->arg, 'constructor argument and method' );
+        }
     }
 }
 

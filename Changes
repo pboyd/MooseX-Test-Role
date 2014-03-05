@@ -1,3 +1,7 @@
+Revision history for perl distribution MooseX-Test-Role
+
+    - Adds support for initial constructor arguments (MJGARDNER)
+
 0.04    2014-03-01
 
     - Adds support for Role::Tiny and Moo::Role (newer versions of Moo::Role

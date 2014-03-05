@@ -33,7 +33,11 @@ sub requires_ok {
 }
 
 sub consumer_of {
-    my ( $role, %methods ) = @_;
+    my $role = shift;
+
+    # If the second argument is an arrayref, pass it to new() below
+    my @args = ref $_[0] eq 'ARRAY' ? @{ +shift } : ();
+    my %methods = @_;
 
     my $role_type = _derive_role_type($role);
     confess 'first argument to consumer_of should be a role' unless $role_type;
@@ -56,7 +60,7 @@ sub consumer_of {
 
     # Moose and Moo can be instantiated and should be. Role::Tiny however isn't
     # a full OO implementation and so doesn't provide a "new" method.
-    return $package->can('new') ? $package->new() : $package;
+    return $package->can('new') ? $package->new(@args) : $package;
 }
 
 sub _required_methods {
@@ -219,7 +223,7 @@ C<MooseX::Test::Role::consumer_of> simply makes this easier to do.
 
 =over 4
 
-=item C<consumer_of ($role, %methods)>
+=item C<consumer_of ($role, [$init_args_ref], %methods)>
 
 Creates a class which consumes the role.
 
@@ -233,11 +237,22 @@ L<Role::Tiny>), then the package name will be returned instead.
 Any method required by the role will be stubbed. To override the default stub
 methods, or to add additional methods, specify the name and a coderef:
 
-  consumer_of('MyRole',
-      method1 => sub { 'one' },
-      method2 => sub { 'two' },
-      required_method => sub { 'required' },
-  );
+    consumer_of('MyRole',
+        method1 => sub { 'one' },
+        method2 => sub { 'two' },
+        required_method => sub { 'required' },
+    );
+
+To provide initial arguments to the C<new()> constructor method (if it exists),
+the second argument should be an array reference with those arguments.  This
+is helpful if the role has attributes that are required at construction time.
+Example:
+
+    consumer_of('MyRoleWithArgs',
+        [arg1 => 'foo', arg2 => 'bar],
+        method1 => sub { 'one' },
+        ...
+    );
 
 =item C<requires_ok ($role, @methods)>
 
@@ -251,9 +266,11 @@ Patches, comments or mean-spirited code reviews are all welcomed on GitHub:
 
 L<https://github.com/pboyd/MooseX-Test-Role>
 
-=head1 AUTHOR
+=head1 AUTHORS
 
 Paul Boyd <boyd.paul2@gmail.com>
+
+Mark Gardner <mjgardner@cpan.org>
 
 =head1 COPYRIGHT AND LICENSE
 
