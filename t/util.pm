@@ -10,6 +10,7 @@ sub make_role {
     my $type             = $args{type};
     my $required_methods = $args{required_methods};
     my $methods          = $args{methods} || [];
+    my $attributes_ref   = $args{attributes} || [];
 
     my $required_source = '';
 
@@ -17,6 +18,11 @@ sub make_role {
         $required_source = 'requires qw( ';
         $required_source .= join( ' ', @{$required_methods} );
         $required_source .= ' );';
+    }
+
+    if ($type eq 'Moose::Role' or $type eq 'Moo::Role') {
+        $required_source .= join "\n" =>
+            map {"has $_ => (is => 'ro');"} @{$attributes_ref};
     }
 
     my $package = 'TestRole' . $role_sequence++;
