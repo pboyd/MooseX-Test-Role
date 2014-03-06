@@ -67,11 +67,7 @@ sub _required_methods {
         @methods = $role->meta->get_required_method_list();
     }
     elsif ($role_type eq 'Role::Tiny') {
-
-        # This seems brittle, but there aren't many options to get this data.
-        # Moo relies on %INFO too, so it seems like it would be a hard thing
-        # for to move away from.
-        my $info = $Role::Tiny::INFO{$role};
+        my $info = _role_tiny_info($role);
         if ($info && ref($info->{requires}) eq 'ARRAY') {
             @methods = @{$info->{requires}};
         }
@@ -88,7 +84,7 @@ sub _derive_role_type {
         return 'Moose::Role';
     }
 
-    if (try_load_class('Role::Tiny') && Role::Tiny->is_role($role)) {
+    if (try_load_class('Role::Tiny') && _role_tiny_info($role)) {
         # Also covers older Moo::Roles
         return 'Role::Tiny';
     }
@@ -132,6 +128,15 @@ sub _build_consuming_package {
     die $@ if $@;
 
     return $package;
+}
+
+sub _role_tiny_info {
+    # This seems brittle, but there aren't many options to get this data.
+    # Moo relies on %INFO too, so it seems like it would be a hard thing
+    # for to move away from.
+
+    my $role = shift;
+    return $Role::Tiny::INFO{$role};
 }
 
 my $Test = Test::Builder->new();
