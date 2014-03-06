@@ -1,3 +1,12 @@
+0.05    2014-03-XX
+
+    - Support for older Role::Tiny versions without Role::Tiny::is_role
+
+0.04    2014-03-01
+
+    - Adds support for Role::Tiny and Moo::Role (newer versions of Moo::Role
+    - Support Role::Tiny versions before 
+
 0.04    2014-03-01
 
     - Adds support for Role::Tiny and Moo::Role (newer versions of Moo::Role
