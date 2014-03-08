@@ -1,6 +1,10 @@
-0.05    2014-03-XX
+0.05    2014-03-08
 
     - Support for older Role::Tiny versions without Role::Tiny::is_role
+    - Adds consuming_class(), for creating a class that consumes a role without
+      creating an instance of it.
+    - Adds consuming_instance(), which is essentially consumer_of with named
+      arguments.
 
 0.04    2014-03-01
 
