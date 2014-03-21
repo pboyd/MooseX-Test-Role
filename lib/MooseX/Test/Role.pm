@@ -1,6 +1,6 @@
 package MooseX::Test::Role;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use strict;
 use warnings;
@@ -35,26 +35,24 @@ sub requires_ok {
 sub consuming_class {
     my ( $role, %args ) = @_;
 
-    my %methods = exists $args{methods} ? %{$args{methods}} : ();
+    my %methods = exists $args{methods} ? %{ $args{methods} } : ();
 
     my $role_type = _derive_role_type($role);
     confess 'first argument should be a role' unless $role_type;
 
-    # Inline stubs for everything that's required so it'll pass the requires check.
-    my @default_subs = map { "sub $_ { }" } _required_methods($role_type, $role);
-
-    my $package = _build_consuming_package(
+    my $package = _package_name();
+    _add_methods(
+        package   => $package,
         role_type => $role_type,
-        role => $role,
-        inline_subs => \@default_subs,
+        role      => $role,
+        methods   => \%methods,
     );
 
-    # Now replace the stubs with any methods we were passed.
-    while (my ($method, $subref) = each(%methods)) {
-        no strict 'refs';
-        no warnings 'redefine';
-        *{$package . '::' . $method} = $subref;
-    }
+    _apply_role(
+        package   => $package,
+        role_type => $role_type,
+        role      => $role,
+    );
 
     return $package;
 }
@@ -109,12 +107,16 @@ sub _derive_role_type {
 }
 
 my $package_counter = 0;
-sub _build_consuming_package {
+sub _package_name {
+    return 'MooseX::Test::Role::Consumer' . $package_counter++;
+}
+
+sub _apply_role {
     my %args = @_;
 
+    my $package   = $args{package};
     my $role_type = $args{role_type};
-    my $role = $args{role};
-    my $inline_subs = $args{inline_subs} || [];
+    my $role      = $args{role};
 
     # We'll need a thing that exports a "with" sub
     my $with_exporter;
@@ -128,7 +130,6 @@ sub _build_consuming_package {
         confess "Unknown role type $role_type";
     }
 
-    my $package = 'MooseX::Test::Role::Consumer' . $package_counter++;
     my $source = qq{
         package $package;
 
@@ -136,14 +137,39 @@ sub _build_consuming_package {
         with('$role');
     };
 
-    $source .= join("\n", @{$inline_subs});
-
     #warn $source;
 
     eval($source);
     die $@ if $@;
 
     return $package;
+}
+
+sub _add_methods {
+    my %args = @_;
+
+    my $role_type = $args{role_type};
+    my $package   = $args{package};
+    my $role      = $args{role};
+    my $methods   = $args{methods};
+
+    $methods->{$_} ||= sub { undef } for _required_methods( $role_type, $role );
+
+    my $meta;
+    $meta = Moose::Meta::Class->create($package) if $role_type eq 'Moose::Role';
+
+    while ( my ( $method, $subref ) = each(%{$methods}) ) {
+        if ($meta) {
+            $meta->add_method($method => $subref);
+        }
+        else {
+            no strict 'refs';
+            #no warnings 'redefine';
+            *{ $package . '::' . $method } = $subref;
+        }
+    }
+
+    return;
 }
 
 sub _role_tiny_info {

@@ -26,14 +26,20 @@ sub test_role_type {
 
         my $role = util::make_role(
             type             => $type,
-            required_methods => ['c'],
-            methods          => [ 'sub a { "return a" }', ]
+            required_methods => ['c', 'appender'],
+            methods          => [ 'sub a { "return a" }', ],
+            extra            => q[
+                around 'appender' => sub {
+                    my ($orig, $self) = @_;
+                    return ( $self->$orig(), 'appended' );
+                };
+            ],
         );
 
         my $consumer = consuming_object($role);
 
         if ($type ne 'Role::Tiny') {
-            ok(blessed($consumer), 'should return a a blessed reference');
+            ok(blessed($consumer), 'should return a blessed reference');
         }
 
         ok( $consumer, 'consuming_object should return something' );
@@ -41,6 +47,7 @@ sub test_role_type {
             'consuming_object should return an object that consumes the role' );
         is( $consumer->a, 'return a',
             'role methods can be called on the object' );
+        is_deeply( [$consumer->appender()], [undef, 'appended'], 'around\'s should work' );
 
         $consumer = consuming_object(
             $role,
@@ -62,6 +69,14 @@ sub test_role_type {
             }
         );
         is( $consumer->c, 'custom c', 'explicit methods override the default' );
+
+        $consumer = consuming_object(
+            $role,
+            methods => {
+                appender => sub { 'x' }
+            }
+        );
+        is_deeply( [$consumer->appender()], ['x', 'appended'], 'around\'s should wrap passed in methods' );
     }
 }
 

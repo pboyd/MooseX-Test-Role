@@ -30,6 +30,10 @@ sub make_role {
 
     $source .= join( "\n", @{$methods} );
 
+    if ($args{extra}) {
+        $source .= "\n$args{extra}"
+    }
+
     #warn $source;
 
     eval($source);

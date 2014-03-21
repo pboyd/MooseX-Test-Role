@@ -1,3 +1,7 @@
+0.06    2014-03-21
+
+    - Fixing a bug where method modifers were clobbered after being applied.
+
 0.05    2014-03-08
 
     - Support for older Role::Tiny versions without Role::Tiny::is_role
