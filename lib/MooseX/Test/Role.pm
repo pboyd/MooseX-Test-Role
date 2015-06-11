@@ -159,6 +159,15 @@ sub _add_methods {
     $meta = Moose::Meta::Class->create($package) if $role_type eq 'Moose::Role';
 
     while ( my ( $method, $subref ) = each(%{$methods}) ) {
+        # This allows us to have scalar values without an anonymous sub in the
+        # definition, similar to Moose's default values. We need to make a lexical
+        # copy of $subref so we do not build a circle where we return itself as a
+        # coderef later on.
+        if ( !ref $subref ) {
+            my $value = $subref;
+            $subref = sub { $value };
+        }
+
         if ($meta) {
             $meta->add_method($method => $subref);
         }
@@ -288,6 +297,17 @@ methods, or to add additional methods, specify the name and a coderef:
         method1 => sub { 'one' },
         method2 => sub { 'two' },
         required_method => sub { 'required' },
+    );
+
+For methods that should just return a fixed scalar value, you can ommit the
+coderef.
+
+    consuming_class('MyRole',
+        method1    => 'one',
+        method_uc1 => sub {
+            my ($self) = @_;
+            lc $self->one;
+        },
     );
 
 =item C<consuming_object($role, methods => \%methods)>

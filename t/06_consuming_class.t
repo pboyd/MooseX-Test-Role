@@ -58,6 +58,15 @@ sub test_role_type {
             }
         );
         is( $consumer->c, 'custom c', 'explicit methods override the default' );
+
+        $consumer = consuming_object(
+            $role,
+            methods => {
+                d => 'from d'
+            }
+        );
+        is( $consumer->d, 'from d',
+            'scalar values can be passed to consuming_object to create object methods' );
     }
 }
 

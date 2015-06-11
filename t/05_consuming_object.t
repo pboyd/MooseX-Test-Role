@@ -73,6 +73,15 @@ sub test_role_type {
         $consumer = consuming_object(
             $role,
             methods => {
+                d => 'from d'
+            }
+        );
+        is( $consumer->d, 'from d',
+            'scalar values can be passed to consuming_object to create object methods' );
+
+        $consumer = consuming_object(
+            $role,
+            methods => {
                 appender => sub { 'x' }
             }
         );
