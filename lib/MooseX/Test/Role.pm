@@ -208,6 +208,7 @@ MooseX::Test::Role - Test functions for Moose roles
 
     use MooseX::Test::Role;
     use Test::More tests => 2;
+    use MyRole;
 
     requires_ok('MyRole', qw/method1 method2/);
 
@@ -287,8 +288,9 @@ C<MooseX::Test::Role> simply makes this easier to do.
 
 Creates a class which consumes the role, and returns it's package name.
 
-C<$role> must be the package name of a role. L<Moose::Role>, L<Moo::Role> and
-L<Role::Tiny> are supported.
+C<$role> must be the package name of a role. You need to C<use> or C<require>
+that package yourself. L<Moose::Role>, L<Moo::Role> and L<Role::Tiny>
+are supported.
 
 Any method required by the role will be stubbed. To override the default stub
 methods, or to add additional methods, specify the name and a coderef:
