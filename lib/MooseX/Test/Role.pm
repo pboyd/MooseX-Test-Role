@@ -1,6 +1,6 @@
 package MooseX::Test::Role;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 use strict;
 use warnings;
@@ -209,18 +209,20 @@ MooseX::Test::Role - Test functions for Moose roles
 =head1 SYNOPSIS
 
     use MooseX::Test::Role;
-    use Test::More tests => 2;
+    use Test::More tests => 3;
 
     requires_ok('MyRole', qw/method1 method2/);
 
     my $consumer = consuming_object(
         'MyRole',
         methods => {
-            method1 => sub { 1 }
+            method1 => 1,
+            method2 => sub { shift->method1() },
         }
     );
     ok( $consumer->myrole_method );
     is( $consumer->method1, 1 );
+    is( $consumer->method2, 1 );
 
     my $consuming_class = consuming_class('MyRole');
     ok( $consuming_class->class_method() );

@@ -1,3 +1,8 @@
+0.07    2015-06-11
+
+    - Add a shortcut for mock methods that return hard-coded scalars (simbabque)
+    - Load role clases if they haven't been loaded already.
+
 0.06    2014-03-21
 
     - Fixing a bug where method modifers were clobbered after being applied.
@@ -9,11 +14,6 @@
       creating an instance of it.
     - Adds consuming_instance(), which is essentially consumer_of with named
       arguments.
-
-0.04    2014-03-01
-
-    - Adds support for Role::Tiny and Moo::Role (newer versions of Moo::Role
-    - Support Role::Tiny versions before 
 
 0.04    2014-03-01
 
