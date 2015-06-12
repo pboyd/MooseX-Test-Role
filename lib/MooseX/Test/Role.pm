@@ -93,6 +93,8 @@ sub _required_methods {
 sub _derive_role_type {
     my $role = shift;
 
+    try_load_class($role);
+
     if ($role->can('meta') && $role->meta()->isa('Moose::Meta::Role')) {
         # Also covers newer Moo::Roles
         return 'Moose::Role';
