@@ -95,7 +95,9 @@ sub _derive_role_type {
 
     try_load_class($role);
 
-    if ($role->can('meta') && $role->meta()->isa('Moose::Meta::Role')) {
+    # UNIVERSAL::isa() avoids calling overridden `isa`s, because Moo::Roles fallback to Moose,
+    # which might not be installed
+    if ($role->can('meta') && UNIVERSAL::isa($role->meta(), 'Moose::Meta::Role')) {
         # Also covers newer Moo::Roles
         return 'Moose::Role';
     }
